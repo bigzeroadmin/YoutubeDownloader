@@ -11,6 +11,13 @@ FILE_TTL_SECONDS = int(os.getenv("FILE_TTL_SECONDS", "3600"))  # 1 hour
 CLEANUP_INTERVAL_SECONDS = int(os.getenv("CLEANUP_INTERVAL_SECONDS", "300"))  # 5 min
 MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", "2048"))
 
+# --- Large file / Cookie refresh ---
+LARGE_FILE_TIMEOUT_SECONDS = int(os.getenv("LARGE_FILE_TIMEOUT_SECONDS", "7200"))  # 2 hours
+LARGE_FILE_THRESHOLD_BYTES = int(os.getenv("LARGE_FILE_THRESHOLD_BYTES", str(2 * 1024**3)))  # 2 GB
+COOKIE_MAX_AGE_SECONDS = int(os.getenv("COOKIE_MAX_AGE_SECONDS", "3600"))  # 1 hour
+COOKIE_REFRESH_WAIT_SECONDS = int(os.getenv("COOKIE_REFRESH_WAIT_SECONDS", "120"))
+COOKIE_RETRY_MAX = int(os.getenv("COOKIE_RETRY_MAX", "2"))
+
 # --- Storage ---
 DOWNLOAD_DIR = Path(os.getenv("DOWNLOAD_DIR", str(BASE_DIR / "downloads")))
 DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)

@@ -2,8 +2,9 @@ const API = "/api";
 
 let allFormats = [];
 let currentTab = "video";
-let selectedFormatId = null;
-let pollTimer = null;
+
+// Queue: [{taskId, formatLabel, filesize, status, progress, error, retries, pollTimer}]
+const taskQueue = [];
 
 function $(sel) {
   return document.querySelector(sel);
@@ -31,6 +32,8 @@ function formatDuration(sec) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+/* ── Resolve ── */
+
 async function handleResolve() {
   const url = $("#urlInput").value.trim();
   if (!url) return;
@@ -39,7 +42,6 @@ async function handleResolve() {
   const err = $("#errorMsg");
   hide(err);
   hide($("#videoInfo"));
-  hide($("#taskSection"));
   btn.disabled = true;
   btn.textContent = "解析中...";
 
@@ -72,10 +74,11 @@ function renderVideoInfo(data) {
   $("#videoDuration").textContent = formatDuration(data.duration);
 
   allFormats = data.formats || [];
-  selectedFormatId = null;
   switchTab("video");
   show($("#videoInfo"));
 }
+
+/* ── Tabs & Format List ── */
 
 function switchTab(tab) {
   currentTab = tab;
@@ -115,32 +118,52 @@ function renderFormats() {
           ? `${f.resolution || "?"} · ${f.ext}`
           : `${f.ext} · ${f.abr ? f.abr + " kbps" : f.note || ""}`;
       const detail = formatBytes(f.filesize);
-      return `<div class="format-item${f.format_id === selectedFormatId ? " selected" : ""}"
-                   data-id="${f.format_id}"
-                   onclick="selectFormat('${f.format_id}')">
+      const inQueue = taskQueue.some(
+        (t) => t.formatId === f.format_id && t.status !== "failed",
+      );
+      return `<div class="format-item" data-id="${f.format_id}">
                 <span class="fmt-label">${label}</span>
                 <span class="fmt-detail">${detail}</span>
+                <button class="fmt-dl-btn"
+                        onclick="startDownload('${f.format_id}')"
+                        ${inQueue ? "disabled" : ""}>
+                  ${inQueue ? "已添加" : "下载"}
+                </button>
               </div>`;
     })
     .join("");
 }
 
-function selectFormat(fmtId) {
-  selectedFormatId = fmtId;
-  renderFormats();
-  startDownload();
-}
+/* ── Download & Queue ── */
 
-async function startDownload() {
-  if (!selectedFormatId) return;
-
+async function startDownload(formatId) {
   const url = $("#urlInput").value.trim();
-  const isAudio = currentTab === "audio";
+  if (!url) return;
 
-  hide($("#taskError"));
-  hide($("#downloadLink"));
-  show($("#taskSection"));
-  updateTaskUI("pending", 0);
+  const fmt = allFormats.find((f) => f.format_id === formatId);
+  if (!fmt) return;
+
+  const isAudio = currentTab === "audio";
+  const label =
+    currentTab === "video"
+      ? `${fmt.resolution || "?"} · ${fmt.ext}`
+      : `${fmt.ext} · ${fmt.abr ? fmt.abr + " kbps" : fmt.note || ""}`;
+
+  // Add placeholder to queue immediately
+  const entry = {
+    taskId: null,
+    formatId: formatId,
+    formatLabel: label,
+    filesize: fmt.filesize,
+    status: "pending",
+    progress: 0,
+    error: null,
+    retries: 0,
+    pollTimer: null,
+  };
+  taskQueue.unshift(entry);
+  renderFormats();
+  renderQueue();
 
   try {
     const res = await fetch(`${API}/download`, {
@@ -148,9 +171,10 @@ async function startDownload() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         url,
-        format_id: selectedFormatId,
+        format_id: formatId,
         audio_only: isAudio,
         convert_mp3: isAudio,
+        expected_filesize: fmt.filesize || null,
       }),
     });
 
@@ -160,31 +184,38 @@ async function startDownload() {
     }
 
     const data = await res.json();
-    pollTask(data.task_id);
+    entry.taskId = data.task_id;
+    pollTask(entry);
   } catch (e) {
-    updateTaskUI("failed", 0, e.message);
+    entry.status = "failed";
+    entry.error = e.message;
+    renderQueue();
+    renderFormats();
   }
 }
 
-function pollTask(taskId) {
-  if (pollTimer) clearInterval(pollTimer);
+function pollTask(entry) {
+  if (entry.pollTimer) clearInterval(entry.pollTimer);
 
-  pollTimer = setInterval(async () => {
+  entry.pollTimer = setInterval(async () => {
+    if (!entry.taskId) return;
     try {
-      const res = await fetch(`${API}/tasks/${taskId}`);
+      const res = await fetch(`${API}/tasks/${entry.taskId}`);
       if (!res.ok) return;
       const task = await res.json();
 
-      updateTaskUI(task.status, task.progress, task.error, task.retries || 0);
+      entry.status = task.status;
+      entry.progress = task.progress;
+      entry.error = task.error;
+      entry.retries = task.retries || 0;
+      entry.cookieRetries = task.cookie_retries || 0;
+      entry.taskFilesize = task.filesize;
+      renderQueue();
 
-      if (task.status === "success") {
-        clearInterval(pollTimer);
-        const link = $("#downloadLink");
-        link.href = `${API}/files/${taskId}`;
-        link.textContent = `下载文件${task.filesize ? " (" + formatBytes(task.filesize) + ")" : ""}`;
-        show(link);
-      } else if (task.status === "failed") {
-        clearInterval(pollTimer);
+      if (task.status === "success" || task.status === "failed") {
+        clearInterval(entry.pollTimer);
+        entry.pollTimer = null;
+        renderFormats();
       }
     } catch {
       /* network hiccup, keep polling */
@@ -192,40 +223,72 @@ function pollTask(taskId) {
   }, 1500);
 }
 
+/* ── Queue Rendering ── */
+
 const STATUS_LABELS = {
   pending: "等待中",
   running: "下载中",
   success: "完成",
   failed: "失败",
+  waiting_cookies: "等待Cookie刷新...",
 };
 
-function updateTaskUI(status, progress, error, retries) {
-  const badge = $("#taskStatusBadge");
-  let label = STATUS_LABELS[status] || status;
-  if (retries > 0 && status === "pending") {
-    label = `重试中 (${retries})`;
-  } else if (retries > 0 && status === "running") {
-    label = `下载中 (重试 ${retries})`;
-  }
-  badge.textContent = label;
-  badge.style.background =
-    status === "success"
-      ? "var(--success)"
-      : status === "failed"
-        ? "var(--error)"
-        : retries > 0
-          ? "var(--warning, #f59e0b)"
-          : "var(--accent)";
-  badge.style.color = "#fff";
+function statusColor(status, retries) {
+  if (status === "success") return "var(--success)";
+  if (status === "failed") return "var(--error)";
+  if (status === "waiting_cookies") return "var(--warning, #f59e0b)";
+  if (retries > 0) return "var(--warning, #f59e0b)";
+  return "var(--accent)";
+}
 
-  $("#taskProgress").textContent = `${Math.round(progress)}%`;
-  $("#progressFill").style.width = `${progress}%`;
+function renderQueue() {
+  const section = $("#queueSection");
+  const list = $("#queueList");
 
-  const errEl = $("#taskError");
-  if (error && status === "failed") {
-    errEl.textContent = error;
-    show(errEl);
-  } else {
-    hide(errEl);
+  if (taskQueue.length === 0) {
+    hide(section);
+    return;
   }
+  show(section);
+
+  list.innerHTML = taskQueue
+    .map((t, i) => {
+      let label = STATUS_LABELS[t.status] || t.status;
+      if (t.retries > 0 && t.status === "pending") label = `重试中 (${t.retries})`;
+      else if (t.retries > 0 && t.status === "running") label = `下载中 (重试 ${t.retries})`;
+
+      const pct = Math.round(t.progress);
+      const color = statusColor(t.status, t.retries);
+      const sizeStr = formatBytes(t.filesize);
+
+      let extra = "";
+      if (t.status === "failed" && t.error) {
+        extra += `<p class="error">${escapeHtml(t.error)}</p>`;
+      }
+      if (t.status === "success" && t.taskId) {
+        const dlSize = t.taskFilesize ? ` (${formatBytes(t.taskFilesize)})` : "";
+        extra += `<a class="queue-dl-link" href="${API}/files/${t.taskId}">下载文件${dlSize}</a>`;
+      }
+
+      return `<div class="queue-item" data-idx="${i}">
+        <div class="queue-item-header">
+          <span class="queue-item-title">${escapeHtml(t.formatLabel)} · ${sizeStr}</span>
+          <div class="queue-item-right">
+            <span class="badge" style="background:${color};color:#fff">${label}</span>
+            <span style="font-size:0.78rem;color:var(--text-muted)">${pct}%</span>
+          </div>
+        </div>
+        <div class="queue-progress-bar">
+          <div class="queue-progress-fill" style="width:${t.progress}%;background:${color}"></div>
+        </div>
+        ${extra}
+      </div>`;
+    })
+    .join("");
+}
+
+function escapeHtml(str) {
+  const d = document.createElement("div");
+  d.textContent = str;
+  return d.innerHTML;
 }

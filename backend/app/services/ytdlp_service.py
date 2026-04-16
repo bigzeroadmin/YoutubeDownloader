@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -10,6 +11,7 @@ import yt_dlp
 from app.config import (
     ALLOWED_HOSTS,
     AUTH_MODE,
+    COOKIE_MAX_AGE_SECONDS,
     COOKIES_FILE,
     COOKIES_FROM_BROWSER,
     RESOLVE_TIMEOUT_SECONDS,
@@ -22,6 +24,28 @@ logger = logging.getLogger(__name__)
 _URL_RE = re.compile(
     r"^https?://(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)/",
 )
+
+_COOKIE_ERROR_RE = re.compile(
+    r"(HTTP Error 403|Sign in to confirm|cookies?\s*(are\s*)?expired|"
+    r"login required|session\s*expired|consent\s*required|"
+    r"This request was detected as a bot)",
+    re.IGNORECASE,
+)
+
+
+def get_cookie_age_seconds() -> float | None:
+    """Return age of cookies.txt in seconds, or None if file missing."""
+    if not COOKIES_FILE:
+        return None
+    p = Path(COOKIES_FILE)
+    if not p.is_file():
+        return None
+    return time.time() - p.stat().st_mtime
+
+
+def is_cookie_error(exc: Exception) -> bool:
+    """Return True if the exception looks like a cookie/auth problem."""
+    return bool(_COOKIE_ERROR_RE.search(str(exc)))
 
 
 def validate_url(url: str) -> str:

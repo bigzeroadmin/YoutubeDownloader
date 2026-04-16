@@ -13,6 +13,7 @@ class TaskStatus(str, enum.Enum):
     RUNNING = "running"
     SUCCESS = "success"
     FAILED = "failed"
+    WAITING_COOKIES = "waiting_cookies"
 
 
 class FormatInfo(BaseModel):
@@ -43,6 +44,7 @@ class DownloadRequest(BaseModel):
     format_id: str
     audio_only: bool = False
     convert_mp3: bool = False
+    expected_filesize: Optional[int] = None
 
 
 class TaskInfo(BaseModel):
@@ -56,6 +58,8 @@ class TaskInfo(BaseModel):
     filesize: Optional[int] = None
     error: Optional[str] = None
     progress: float = 0.0
+    expected_filesize: Optional[int] = None
     created_at: float = Field(default_factory=time.time)
     updated_at: float = Field(default_factory=time.time)
     retries: int = 0
+    cookie_retries: int = 0

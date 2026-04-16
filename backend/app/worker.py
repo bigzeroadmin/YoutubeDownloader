@@ -14,15 +14,19 @@ from pathlib import Path
 import yt_dlp
 
 from app.config import (
+    COOKIE_MAX_AGE_SECONDS,
+    COOKIE_RETRY_MAX,
     DOWNLOAD_DIR,
     DOWNLOAD_TIMEOUT_SECONDS,
+    LARGE_FILE_THRESHOLD_BYTES,
+    LARGE_FILE_TIMEOUT_SECONDS,
     MAX_CONCURRENT_DOWNLOADS,
     WORKER_MAX_RETRIES,
     WORKER_RETRY_DELAY_SECONDS,
 )
 from app.models import TaskInfo, TaskStatus
 from app.services.task_manager import get_redis, get_task, pop_task, update_task
-from app.services.ytdlp_service import _base_opts
+from app.services.ytdlp_service import _base_opts, get_cookie_age_seconds, is_cookie_error
 
 logging.basicConfig(
     level=logging.INFO,
@@ -35,7 +39,7 @@ _executor = ThreadPoolExecutor(max_workers=MAX_CONCURRENT_DOWNLOADS)
 
 _NON_RETRYABLE_PATTERNS = re.compile(
     r"(format.*not available|no video formats|unavailable|private video|"
-    r"copyright|removed|login required|not a bot)",
+    r"copyright|removed)",
     re.IGNORECASE,
 )
 
@@ -51,6 +55,13 @@ def _handle_signal(*_):
     global _shutdown
     _shutdown = True
     logger.info("Shutdown signal received")
+
+
+def _compute_timeout(task: TaskInfo) -> float:
+    """Return timeout in seconds; use longer timeout for large files."""
+    if task.expected_filesize and task.expected_filesize > LARGE_FILE_THRESHOLD_BYTES:
+        return LARGE_FILE_TIMEOUT_SECONDS
+    return DOWNLOAD_TIMEOUT_SECONDS
 
 
 def _progress_hook(task: TaskInfo):
@@ -138,10 +149,61 @@ async def _retry_delay(attempt: int) -> None:
     await asyncio.sleep(delay)
 
 
+async def _handle_cookie_error(task: TaskInfo, exc: Exception) -> None:
+    """Handle cookie/auth errors with dedicated retry + optional refresh wait."""
+    task.cookie_retries += 1
+    if task.cookie_retries <= COOKIE_RETRY_MAX:
+        task.status = TaskStatus.WAITING_COOKIES
+        task.error = (
+            f"Cookie/auth error, waiting for refresh "
+            f"({task.cookie_retries}/{COOKIE_RETRY_MAX}): {exc}"
+        )
+        logger.warning(
+            "Task %s cookie error (%d/%d): %s",
+            task.task_id, task.cookie_retries, COOKIE_RETRY_MAX, exc,
+        )
+        await update_task(task)
+
+        # Wait for host-side cron to refresh the cookie file
+        from app.services.cookie_refresh import wait_for_cookie_refresh
+        refreshed = await wait_for_cookie_refresh()
+
+        if refreshed:
+            task.status = TaskStatus.PENDING
+            task.error = "Cookies refreshed, retrying..."
+            logger.info("Task %s: cookies refreshed, re-queuing", task.task_id)
+        else:
+            task.status = TaskStatus.PENDING
+            task.error = (
+                f"Cookie refresh timed out, retrying with current cookies "
+                f"({task.cookie_retries}/{COOKIE_RETRY_MAX})"
+            )
+            logger.warning("Task %s: cookie refresh timed out, retrying anyway", task.task_id)
+
+        r = await get_redis()
+        await r.lpush("queue:downloads", task.task_id)
+        await asyncio.sleep(2)
+    else:
+        task.status = TaskStatus.FAILED
+        task.error = (
+            f"Cookie/auth failed after {COOKIE_RETRY_MAX} refresh attempts: {exc}. "
+            "Run ./refresh_cookies.sh manually."
+        )
+        logger.error("Task %s cookie auth failed permanently: %s", task.task_id, exc)
+
+
 async def process_task(task: TaskInfo) -> None:
     task.status = TaskStatus.RUNNING
     task.updated_at = time.time()
     await update_task(task)
+
+    # Pre-download cookie freshness check
+    cookie_age = get_cookie_age_seconds()
+    if cookie_age is not None and cookie_age > COOKIE_MAX_AGE_SECONDS:
+        logger.warning(
+            "Task %s: cookies are %ds old (max %ds), may expire during download",
+            task.task_id, int(cookie_age), COOKIE_MAX_AGE_SECONDS,
+        )
 
     task_dir = DOWNLOAD_DIR / task.task_id
     task_dir.mkdir(parents=True, exist_ok=True)
@@ -150,11 +212,12 @@ async def process_task(task: TaskInfo) -> None:
     progress_coro = _sync_progress(task, stop_event)
     progress_task = asyncio.create_task(progress_coro)
 
+    timeout = _compute_timeout(task)
     loop = asyncio.get_running_loop()
     try:
         await asyncio.wait_for(
             loop.run_in_executor(_executor, _run_ytdlp, task, task_dir),
-            timeout=DOWNLOAD_TIMEOUT_SECONDS,
+            timeout=timeout,
         )
 
         result_file = _find_result_file(task_dir)
@@ -182,20 +245,23 @@ async def process_task(task: TaskInfo) -> None:
             logger.error("Task %s timed out permanently", task.task_id)
 
     except Exception as exc:
-        retryable = _is_retryable(exc)
-        task.retries += 1
-
-        if retryable and task.retries < WORKER_MAX_RETRIES:
-            task.status = TaskStatus.PENDING
-            task.error = f"Retry {task.retries}/{WORKER_MAX_RETRIES}: {exc}"
-            logger.warning("Task %s retry %d/%d: %s", task.task_id, task.retries, WORKER_MAX_RETRIES, exc)
-            r = await get_redis()
-            await r.lpush("queue:downloads", task.task_id)
-            await _retry_delay(task.retries)
+        if is_cookie_error(exc):
+            await _handle_cookie_error(task, exc)
         else:
-            task.status = TaskStatus.FAILED
-            task.error = str(exc) if not retryable else f"Failed after {WORKER_MAX_RETRIES} attempts: {exc}"
-            logger.error("Task %s failed (retryable=%s): %s", task.task_id, retryable, exc)
+            retryable = _is_retryable(exc)
+            task.retries += 1
+
+            if retryable and task.retries < WORKER_MAX_RETRIES:
+                task.status = TaskStatus.PENDING
+                task.error = f"Retry {task.retries}/{WORKER_MAX_RETRIES}: {exc}"
+                logger.warning("Task %s retry %d/%d: %s", task.task_id, task.retries, WORKER_MAX_RETRIES, exc)
+                r = await get_redis()
+                await r.lpush("queue:downloads", task.task_id)
+                await _retry_delay(task.retries)
+            else:
+                task.status = TaskStatus.FAILED
+                task.error = str(exc) if not retryable else f"Failed after {WORKER_MAX_RETRIES} attempts: {exc}"
+                logger.error("Task %s failed (retryable=%s): %s", task.task_id, retryable, exc)
 
     finally:
         stop_event.set()

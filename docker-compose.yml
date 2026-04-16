@@ -46,6 +46,11 @@ services:
       WORKER_MAX_RETRIES: "3"
       WORKER_RETRY_DELAY_SECONDS: "5"
       DOWNLOAD_TIMEOUT_SECONDS: "600"
+      LARGE_FILE_TIMEOUT_SECONDS: "7200"
+      LARGE_FILE_THRESHOLD_BYTES: "2147483648"
+      COOKIE_MAX_AGE_SECONDS: "3600"
+      COOKIE_REFRESH_WAIT_SECONDS: "120"
+      COOKIE_RETRY_MAX: "2"
     volumes:
       - download_data:/app/downloads
       - ytdlp_cache:/app/.ytdlp_cache

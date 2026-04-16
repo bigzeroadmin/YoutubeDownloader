@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.config import CLEANUP_INTERVAL_SECONDS, DOWNLOAD_DIR, FILE_TTL_SECONDS
-from app.routes import auth, download, files, resolve, tasks
+from app.routes import auth, cookies, download, files, resolve, tasks
 
 logging.basicConfig(
     level=logging.INFO,
@@ -65,6 +65,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router, prefix="/api", tags=["auth"])
+app.include_router(cookies.router, prefix="/api", tags=["cookies"])
 app.include_router(resolve.router, prefix="/api", tags=["resolve"])
 app.include_router(download.router, prefix="/api", tags=["download"])
 app.include_router(tasks.router, prefix="/api", tags=["tasks"])
