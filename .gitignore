@@ -2,12 +2,28 @@ __pycache__/
 *.pyc
 *.pyo
 .env
-backend/downloads/
+downloads/
 *.egg-info/
 dist/
 .venv/
 venv/
 node_modules/
 .DS_Store
-cookies.txt
-backend/.ytdlp_cache/
+
+# macOS
+desktop/macos/resources/python/
+desktop/macos/resources/ffmpeg/
+desktop/macos/resources/node/
+desktop/macos/resources/*.tar.gz
+desktop/macos/resources/*.zip
+desktop/macos/dist/
+desktop/macos/*.dmg
+
+# Windows
+desktop/windows/resources/
+desktop/windows/dist/
+desktop/windows/*.exe
+
+# Shared backend
+desktop/shared/backend/downloads/
+desktop/shared/backend/.ytdlp_cache/

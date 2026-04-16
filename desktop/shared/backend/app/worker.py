@@ -81,9 +81,18 @@ def _run_ytdlp(task: TaskInfo, task_dir: Path) -> None:
     """Synchronous yt-dlp download — runs in a thread."""
     is_merged = "+" in task.format_id
 
+    # Determine format string: for video-only formats, merge with best audio
+    format_str = task.format_id
+    if not is_merged and not task.audio_only and not task.convert_mp3:
+        # This is a single format that may be video-only (no audio)
+        # Use yt-dlp's format selector to merge with best audio if needed
+        # bv*+ba/b means: best video with audio, or merge video-only with best audio
+        format_str = f"{task.format_id}+bestaudio/{task.format_id}/best"
+        is_merged = True  # Treat as merged to enable merge_output_format
+
     ydl_opts: dict = {
         **_base_opts(),
-        "format": task.format_id,
+        "format": format_str,
         "outtmpl": str(task_dir / "%(title)s.%(ext)s"),
         "socket_timeout": 30,
         "progress_hooks": [_progress_hook(task)],

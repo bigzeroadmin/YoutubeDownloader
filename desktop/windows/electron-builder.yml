@@ -1,0 +1,55 @@
+appId: com.youtubedownload.desktop
+productName: YouTube Download
+copyright: Copyright (c) 2024
+
+directories:
+  output: dist
+  buildResources: assets
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: assets/icon.ico
+
+nsis:
+  oneClick: false
+  perMachine: true
+  allowToChangeInstallationDirectory: true
+  installerIcon: assets/icon.ico
+  uninstallerIcon: assets/icon.ico
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+
+extraResources:
+  - from: resources/python
+    to: python
+    filter:
+      - "**/*"
+  - from: resources/ffmpeg
+    to: ffmpeg
+    filter:
+      - "**/*"
+  - from: resources/node
+    to: node
+    filter:
+      - "**/*"
+  - from: ../shared/backend
+    to: backend
+    filter:
+      - "app/**/*"
+      - "!app/__pycache__/**"
+      - "!app/**/__pycache__/**"
+      - "!**/*.pyc"
+      - "!**/*.pyo"
+  - from: ../shared/frontend
+    to: frontend
+    filter:
+      - "**/*"
+
+files:
+  - src/**/*
+  - package.json
+
+asar: true

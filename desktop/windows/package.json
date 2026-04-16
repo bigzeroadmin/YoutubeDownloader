@@ -1,0 +1,20 @@
+{
+  "name": "youtube-download-windows",
+  "version": "1.0.0",
+  "description": "YouTube Video/Audio Downloader Desktop App (Windows)",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "download-binaries": "powershell -File scripts/download-binaries.ps1",
+    "build-python": "powershell -File scripts/build-python-env.ps1",
+    "prebuild": "npm run download-binaries && npm run build-python",
+    "build": "electron-builder --win --x64",
+    "build-only": "electron-builder --win --x64"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.0"
+  }
+}

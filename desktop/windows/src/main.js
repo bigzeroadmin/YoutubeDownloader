@@ -18,27 +18,28 @@ function getResourcesDir() {
   if (app.isPackaged) {
     return process.resourcesPath;
   }
-  // Development: resources sit beside desktop/
+  // Development: resources sit beside windows/
   return path.join(__dirname, "..", "resources");
 }
 
 function getPythonBin() {
   const res = getResourcesDir();
-  return path.join(res, "python", "bin", "python3.12");
+  // Windows: use python.exe in Scripts directory
+  return path.join(res, "python", "python.exe");
 }
 
 function getBackendDir() {
   if (app.isPackaged) {
     return path.join(process.resourcesPath, "backend");
   }
-  return path.join(__dirname, "..", "..", "backend");
+  return path.join(__dirname, "..", "..", "shared", "backend");
 }
 
 function getFrontendDir() {
   if (app.isPackaged) {
     return path.join(process.resourcesPath, "frontend");
   }
-  return path.join(__dirname, "..", "..", "frontend");
+  return path.join(__dirname, "..", "..", "shared", "frontend");
 }
 
 function getBundledBinDirs() {
@@ -94,11 +95,13 @@ function waitForBackend(port, timeoutMs = 30000) {
 }
 
 // ---------------------------------------------------------------------------
-// Log directory
+// Log directory (Windows)
 // ---------------------------------------------------------------------------
 
 function getLogDir() {
-  const logDir = path.join(os.homedir(), "Library", "Logs", "YouTubeDownload");
+  // Windows: use %APPDATA%/YouTubeDownload/logs
+  const appData = process.env.APPDATA || path.join(os.homedir(), "AppData", "Roaming");
+  const logDir = path.join(appData, "YouTubeDownload", "logs");
   if (!fs.existsSync(logDir)) {
     fs.mkdirSync(logDir, { recursive: true });
   }
@@ -120,19 +123,12 @@ async function startBackend() {
   const extraPaths = getBundledBinDirs();
   const envPath = [...extraPaths, process.env.PATH || ""].join(path.delimiter);
 
-  // DYLD_LIBRARY_PATH for ffmpeg's bundled dylibs
-  const ffmpegLibDir = path.join(resourcesDir, "ffmpeg", "lib");
-  const dyldPath = [ffmpegLibDir, process.env.DYLD_LIBRARY_PATH || ""]
-    .filter(Boolean)
-    .join(path.delimiter);
-
   const env = {
     ...process.env,
     DESKTOP_MODE: "1",
     ELECTRON_RESOURCES_PATH: resourcesDir,
     PYTHONPATH: backendDir,
     PATH: envPath,
-    DYLD_LIBRARY_PATH: dyldPath,
     PYTHONDONTWRITEBYTECODE: "1",
   };
 
@@ -151,6 +147,7 @@ async function startBackend() {
     cwd: backendDir,
     env,
     stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true,
   });
 
   // Log output
@@ -220,9 +217,10 @@ app.whenReady().then(async () => {
     createWindow();
   } catch (err) {
     console.error("Failed to start:", err);
+    const logDir = getLogDir();
     dialog.showErrorBox(
       "Startup Error",
-      `Failed to start the backend server.\n\n${err.message}\n\nCheck logs at ~/Library/Logs/YouTubeDownload/`
+      `Failed to start the backend server.\n\n${err.message}\n\nCheck logs at ${logDir}`
     );
     app.quit();
   }
@@ -240,19 +238,21 @@ app.on("activate", () => {
 
 app.on("before-quit", () => {
   if (pythonProcess) {
-    console.log("Sending SIGTERM to Python backend...");
-    pythonProcess.kill("SIGTERM");
-
-    // Force kill after 5 seconds
-    const killTimer = setTimeout(() => {
-      if (pythonProcess) {
-        console.log("Force killing Python backend...");
-        pythonProcess.kill("SIGKILL");
-      }
-    }, 5000);
-
-    pythonProcess.on("close", () => {
-      clearTimeout(killTimer);
-    });
+    console.log("Terminating Python backend...");
+    // Windows: use taskkill for forceful termination
+    if (process.platform === "win32") {
+      spawn("taskkill", ["/pid", String(pythonProcess.pid), "/f", "/t"]);
+    } else {
+      pythonProcess.kill("SIGTERM");
+      const killTimer = setTimeout(() => {
+        if (pythonProcess) {
+          console.log("Force killing Python backend...");
+          pythonProcess.kill("SIGKILL");
+        }
+      }, 5000);
+      pythonProcess.on("close", () => {
+        clearTimeout(killTimer);
+      });
+    }
   }
 });

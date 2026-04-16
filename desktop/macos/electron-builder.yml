@@ -46,7 +46,7 @@ extraResources:
     to: node
     filter:
       - "**/*"
-  - from: ../backend
+  - from: ../shared/backend
     to: backend
     filter:
       - "app/**/*"
@@ -54,7 +54,7 @@ extraResources:
       - "!app/**/__pycache__/**"
       - "!**/*.pyc"
       - "!**/*.pyo"
-  - from: ../frontend
+  - from: ../shared/frontend
     to: frontend
     filter:
       - "**/*"

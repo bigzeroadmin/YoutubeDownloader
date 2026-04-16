@@ -1,20 +1,18 @@
 {
-  "name": "youtube-download",
+  "name": "youtube-download-desktop",
   "version": "1.0.0",
   "description": "YouTube Video/Audio Downloader Desktop App",
-  "main": "src/main.js",
+  "private": true,
+  "workspaces": [
+    "macos",
+    "windows"
+  ],
   "scripts": {
-    "start": "electron .",
-    "download-binaries": "bash scripts/download-binaries.sh",
-    "build-python": "bash scripts/build-python-env.sh",
-    "prebuild": "npm run download-binaries && npm run build-python",
-    "build": "electron-builder --mac --arm64",
-    "build-only": "electron-builder --mac --arm64"
+    "macos": "npm run start --workspace=macos",
+    "windows": "npm run start --workspace=windows",
+    "build:macos": "npm run build --workspace=macos",
+    "build:windows": "npm run build --workspace=windows"
   },
   "author": "",
-  "license": "MIT",
-  "devDependencies": {
-    "electron": "^33.0.0",
-    "electron-builder": "^25.1.0"
-  }
+  "license": "MIT"
 }

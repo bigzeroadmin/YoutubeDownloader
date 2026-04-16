@@ -5,7 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DESKTOP_DIR="$SCRIPT_DIR/.."
 RESOURCES_DIR="$DESKTOP_DIR/resources"
-BACKEND_DIR="$DESKTOP_DIR/../backend"
+BACKEND_DIR="$DESKTOP_DIR/../shared/backend"
 PYTHON_DIR="$RESOURCES_DIR/python"
 
 PYTHON_BIN="$PYTHON_DIR/bin/python3.12"
