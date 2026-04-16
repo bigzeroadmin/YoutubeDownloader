@@ -1,0 +1,20 @@
+{
+  "name": "youtube-download",
+  "version": "1.0.0",
+  "description": "YouTube Video/Audio Downloader Desktop App",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "download-binaries": "bash scripts/download-binaries.sh",
+    "build-python": "bash scripts/build-python-env.sh",
+    "prebuild": "npm run download-binaries && npm run build-python",
+    "build": "electron-builder --mac --arm64",
+    "build-only": "electron-builder --mac --arm64"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.0"
+  }
+}

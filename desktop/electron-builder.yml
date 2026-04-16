@@ -1,0 +1,66 @@
+appId: com.youtubedownload.desktop
+productName: YouTube Download
+copyright: Copyright © 2024
+
+directories:
+  output: dist
+  buildResources: assets
+
+mac:
+  category: public.app-category.utilities
+  target:
+    - target: dmg
+      arch:
+        - arm64
+  icon: assets/icon.icns
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: assets/entitlements.mac.plist
+  entitlementsInherit: assets/entitlements.mac.plist
+
+dmg:
+  title: YouTube Download
+  icon: assets/icon.icns
+  window:
+    width: 540
+    height: 380
+  contents:
+    - x: 140
+      "y": 180
+      type: file
+    - x: 400
+      "y": 180
+      type: link
+      path: /Applications
+
+extraResources:
+  - from: resources/python
+    to: python
+    filter:
+      - "**/*"
+  - from: resources/ffmpeg
+    to: ffmpeg
+    filter:
+      - "**/*"
+  - from: resources/node
+    to: node
+    filter:
+      - "**/*"
+  - from: ../backend
+    to: backend
+    filter:
+      - "app/**/*"
+      - "!app/__pycache__/**"
+      - "!app/**/__pycache__/**"
+      - "!**/*.pyc"
+      - "!**/*.pyo"
+  - from: ../frontend
+    to: frontend
+    filter:
+      - "**/*"
+
+files:
+  - src/**/*
+  - package.json
+
+asar: true

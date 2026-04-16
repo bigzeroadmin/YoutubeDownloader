@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -11,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.config import CLEANUP_INTERVAL_SECONDS, DOWNLOAD_DIR, FILE_TTL_SECONDS
+from app.config import CLEANUP_INTERVAL_SECONDS, DESKTOP_MODE, DOWNLOAD_DIR, ELECTRON_RESOURCES_PATH, FILE_TTL_SECONDS
 from app.routes import auth, cookies, download, files, resolve, tasks
 
 logging.basicConfig(
@@ -21,6 +22,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 _cleanup_task = None
+_worker_task = None
 
 
 async def _cleanup_expired_files():
@@ -43,10 +45,40 @@ async def _cleanup_expired_files():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _cleanup_task
+    global _cleanup_task, _worker_task
     _cleanup_task = asyncio.create_task(_cleanup_expired_files())
     logger.info("App started – cleanup task scheduled every %ds", CLEANUP_INTERVAL_SECONDS)
+
+    if DESKTOP_MODE:
+        from app.worker import worker_loop
+        _worker_task = asyncio.create_task(worker_loop())
+        logger.info("Desktop mode – embedded worker started")
+
+        # Auto-refresh cookies from browser on startup
+        from app.routes.cookies import _do_refresh_cookies
+        loop = asyncio.get_running_loop()
+        try:
+            result = await loop.run_in_executor(None, _do_refresh_cookies)
+            if result.get("ok"):
+                logger.info("Startup cookie refresh OK: %d cookies from %s",
+                            result.get("cookie_count", 0), result.get("browser", "?"))
+            else:
+                logger.warning("Startup cookie refresh failed: %s", result.get("error", "unknown"))
+        except Exception:
+            logger.exception("Startup cookie refresh error")
+
     yield
+
+    if _worker_task is not None:
+        from app import worker as _worker_mod
+        _worker_mod._shutdown = True
+        _worker_task.cancel()
+        try:
+            await _worker_task
+        except asyncio.CancelledError:
+            pass
+        logger.info("Embedded worker stopped")
+
     _cleanup_task.cancel()
     logger.info("App shutting down")
 
@@ -71,8 +103,19 @@ app.include_router(download.router, prefix="/api", tags=["download"])
 app.include_router(tasks.router, prefix="/api", tags=["tasks"])
 app.include_router(files.router, prefix="/api", tags=["files"])
 
-FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
-if FRONTEND_DIR.exists():
+# Resolve frontend directory: Electron bundle → fallback to project layout
+_frontend_candidates = []
+if ELECTRON_RESOURCES_PATH:
+    _frontend_candidates.append(Path(ELECTRON_RESOURCES_PATH) / "frontend")
+_frontend_candidates.append(Path(__file__).resolve().parent.parent.parent / "frontend")
+
+FRONTEND_DIR = None
+for _candidate in _frontend_candidates:
+    if _candidate.exists():
+        FRONTEND_DIR = _candidate
+        break
+
+if FRONTEND_DIR is not None:
     app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
 
 

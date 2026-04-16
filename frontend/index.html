@@ -11,7 +11,58 @@
     <header>
       <h1>YouTube Downloader</h1>
       <p class="subtitle">私有部署 · 粘贴链接即可下载</p>
+      <button class="help-btn" onclick="openHelp()" title="使用说明">?</button>
     </header>
+
+    <!-- Help Modal -->
+    <div id="helpOverlay" class="modal-overlay hidden" onclick="closeHelpOutside(event)">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>使用说明</h2>
+          <button class="modal-close" onclick="closeHelp()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="step">
+            <span class="step-num">1</span>
+            <div class="step-content">
+              <h4>登录 YouTube</h4>
+              <p>在浏览器中打开 <strong>youtube.com</strong> 并登录你的账号。应用会自动读取浏览器 Cookie 以获取下载权限。</p>
+            </div>
+          </div>
+          <div class="step">
+            <span class="step-num">2</span>
+            <div class="step-content">
+              <h4>复制视频链接</h4>
+              <p>找到想要下载的视频，从地址栏复制完整链接，格式如：<code>https://youtube.com/watch?v=...</code></p>
+            </div>
+          </div>
+          <div class="step">
+            <span class="step-num">3</span>
+            <div class="step-content">
+              <h4>粘贴并解析</h4>
+              <p>将链接粘贴到上方输入框，点击 <strong>"解析"</strong> 按钮。应用将获取视频信息和所有可用的格式。</p>
+            </div>
+          </div>
+          <div class="step">
+            <span class="step-num">4</span>
+            <div class="step-content">
+              <h4>选择格式下载</h4>
+              <p>在 <strong>视频</strong> 或 <strong>音频</strong> 标签页中选择分辨率/码率，点击 <strong>"下载"</strong> 开始任务。</p>
+            </div>
+          </div>
+          <div class="step">
+            <span class="step-num">5</span>
+            <div class="step-content">
+              <h4>获取文件</h4>
+              <p>下载完成后，队列中会出现 <strong>"下载文件"</strong> 按钮，点击即可保存到本地。</p>
+            </div>
+          </div>
+          <div class="help-tip">
+            <strong>提示：</strong>下载文件默认保存在 <code>~/Downloads/YouTubeDownload/</code> 目录下。如遇到下载失败，请确保浏览器已登录 YouTube 并刷新 Cookie。
+          </div>
+        </div>
+      </div>
+    </div>
 
     <section class="input-section">
       <div class="url-bar">

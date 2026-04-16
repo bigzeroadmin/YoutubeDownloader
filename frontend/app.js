@@ -292,3 +292,25 @@ function escapeHtml(str) {
   d.textContent = str;
   return d.innerHTML;
 }
+
+/* ── Help Modal ── */
+
+function openHelp() {
+  show($("#helpOverlay"));
+  document.body.style.overflow = "hidden";
+}
+
+function closeHelp() {
+  hide($("#helpOverlay"));
+  document.body.style.overflow = "";
+}
+
+function closeHelpOutside(e) {
+  if (e.target === $("#helpOverlay")) closeHelp();
+}
+
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape" && !$("#helpOverlay").classList.contains("hidden")) {
+    closeHelp();
+  }
+});

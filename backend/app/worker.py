@@ -25,7 +25,7 @@ from app.config import (
     WORKER_RETRY_DELAY_SECONDS,
 )
 from app.models import TaskInfo, TaskStatus
-from app.services.task_manager import get_redis, get_task, pop_task, update_task
+from app.services.task_manager import get_task, pop_task, push_task, update_task
 from app.services.ytdlp_service import _base_opts, get_cookie_age_seconds, is_cookie_error
 
 logging.basicConfig(
@@ -180,8 +180,7 @@ async def _handle_cookie_error(task: TaskInfo, exc: Exception) -> None:
             )
             logger.warning("Task %s: cookie refresh timed out, retrying anyway", task.task_id)
 
-        r = await get_redis()
-        await r.lpush("queue:downloads", task.task_id)
+        await push_task(task.task_id)
         await asyncio.sleep(2)
     else:
         task.status = TaskStatus.FAILED
@@ -236,8 +235,7 @@ async def process_task(task: TaskInfo) -> None:
             task.status = TaskStatus.PENDING
             task.error = f"Timeout retry {task.retries}/{WORKER_MAX_RETRIES}"
             logger.warning("Task %s timed out, will retry (%d/%d)", task.task_id, task.retries, WORKER_MAX_RETRIES)
-            r = await get_redis()
-            await r.lpush("queue:downloads", task.task_id)
+            await push_task(task.task_id)
             await _retry_delay(task.retries)
         else:
             task.status = TaskStatus.FAILED
@@ -255,8 +253,7 @@ async def process_task(task: TaskInfo) -> None:
                 task.status = TaskStatus.PENDING
                 task.error = f"Retry {task.retries}/{WORKER_MAX_RETRIES}: {exc}"
                 logger.warning("Task %s retry %d/%d: %s", task.task_id, task.retries, WORKER_MAX_RETRIES, exc)
-                r = await get_redis()
-                await r.lpush("queue:downloads", task.task_id)
+                await push_task(task.task_id)
                 await _retry_delay(task.retries)
             else:
                 task.status = TaskStatus.FAILED
