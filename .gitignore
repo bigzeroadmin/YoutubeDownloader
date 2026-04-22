@@ -27,6 +27,4 @@ desktop/windows/*.exe
 # Shared backend
 desktop/shared/backend/downloads/
 desktop/shared/backend/.ytdlp_cache/
-desktop/macos/electron-builder.yml
 desktop/macos/.env.example
-desktop/macos/electron-builder.yml
