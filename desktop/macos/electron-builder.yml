@@ -1,6 +1,6 @@
 appId: com.youtubedownload.desktop
 productName: YouTube Download
-copyright: Copyright © 2024
+copyright: Copyright © 2026 naiqiu zhao
 
 directories:
   output: dist
@@ -17,6 +17,11 @@ mac:
   gatekeeperAssess: false
   entitlements: assets/entitlements.mac.plist
   entitlementsInherit: assets/entitlements.mac.plist
+  # Apple 代码签名 Identity，填写开发者名称和 Team ID（不需要带证书类型前缀）
+  # electron-builder 会自动选择 "Developer ID Application" 证书
+  # 请替换为你的实际信息，格式: "Your Name (TEAM_ID)"
+  identity: "naiqiu zhao (6KC4S5L279)"
+  notarize: true
 
 dmg:
   title: YouTube Download
@@ -38,6 +43,29 @@ extraResources:
     to: python
     filter:
       - "**/*"
+      - "!**/__pycache__/**"
+      - "!**/*.pyc"
+      - "!**/*.pyo"
+      - "!**/test/**"
+      - "!**/tests/**"
+      - "!**/testing/**"
+      - "!**/pip/**"
+      - "!**/pip-*.dist-info/**"
+      - "!**/ensurepip/**"
+      - "!**/idlelib/**"
+      - "!**/tkinter/**"
+      - "!**/turtle*"
+      - "!**/turtledemo/**"
+      - "!**/lib2to3/**"
+      - "!**/distutils/**"
+      - "!**/include/**"
+      - "!**/share/**"
+      - "!lib/tcl*/**"
+      - "!lib/tk*/**"
+      - "!lib/itcl*/**"
+      - "!lib/tdbc*/**"
+      - "!lib/Tix*/**"
+      - "!**/*.dist-info/**"
   - from: resources/ffmpeg
     to: ffmpeg
     filter:

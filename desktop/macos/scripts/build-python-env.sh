@@ -18,9 +18,9 @@ if [ -f "$PYTHON_BIN" ]; then
 else
   echo "[python] Downloading python-build-standalone 3.12 for macOS ARM64..."
 
-  PY_TAG="20250409"
-  PY_RELEASE="cpython-3.12.9+${PY_TAG}-aarch64-apple-darwin-install_only.tar.gz"
-  PY_URL="https://github.com/indygreg/python-build-standalone/releases/download/${PY_TAG}/${PY_RELEASE}"
+  PY_TAG="20260414"
+  PY_RELEASE="cpython-3.12.13+${PY_TAG}-aarch64-apple-darwin-install_only.tar.gz"
+  PY_URL="https://github.com/astral-sh/python-build-standalone/releases/download/${PY_TAG}/${PY_RELEASE}"
   PY_TMP="$RESOURCES_DIR/python_tmp.tar.gz"
 
   mkdir -p "$RESOURCES_DIR"
@@ -51,5 +51,3 @@ grep -v -i "^redis" "$BACKEND_DIR/requirements.txt" > "$REQUIREMENTS_DESKTOP" ||
 echo ""
 echo "=== Python environment ready ==="
 echo "Python: $("$PYTHON_BIN" --version)"
-echo "Packages:"
-"$PYTHON_BIN" -m pip list --format=columns 2>/dev/null | head -20
