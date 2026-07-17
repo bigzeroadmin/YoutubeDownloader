@@ -46,13 +46,12 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 RATE_LIMIT_RESOLVE = os.getenv("RATE_LIMIT_RESOLVE", "10/minute")
 RATE_LIMIT_DOWNLOAD = os.getenv("RATE_LIMIT_DOWNLOAD", "5/minute")
 
-# --- Security: allowed URL hostname patterns ---
+# --- Security: supported video platform hostnames ---
 ALLOWED_HOSTS = [
     "youtube.com",
-    "www.youtube.com",
-    "m.youtube.com",
     "youtu.be",
-    "music.youtube.com",
+    "tiktok.com",
+    "douyin.com",
 ]
 
 # --- Authentication ---

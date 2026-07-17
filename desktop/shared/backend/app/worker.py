@@ -83,10 +83,14 @@ def _run_ytdlp(task: TaskInfo, task_dir: Path) -> None:
 
     # Determine format string: for video-only formats, merge with best audio
     format_str = task.format_id
-    if not is_merged and not task.audio_only and not task.convert_mp3:
+    if (
+        not is_merged
+        and not task.audio_only
+        and not task.convert_mp3
+        and not task.has_audio
+    ):
         # This is a single format that may be video-only (no audio)
         # Use yt-dlp's format selector to merge with best audio if needed
-        # bv*+ba/b means: best video with audio, or merge video-only with best audio
         format_str = f"{task.format_id}+bestaudio/{task.format_id}/best"
         is_merged = True  # Treat as merged to enable merge_output_format
 

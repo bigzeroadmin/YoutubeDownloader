@@ -1,10 +1,11 @@
-# YouTube Downloader Desktop
+# YouTube、TikTok & 抖音 Downloader Desktop
 
-YouTube 视频/音频下载桌面应用。支持 macOS 和 Windows。
+YouTube、TikTok 与抖音视频/音频下载桌面应用。支持 macOS 和 Windows。
 
 ## 功能特性
 
-- **格式选择** — 解析 YouTube 链接，列出所有可用的视频/音频格式（清晰度、编码、大小）
+- **多平台解析** — 支持 YouTube、YouTube Music、TikTok、抖音视频及平台短链接
+- **格式选择** — 列出所有可用的视频/音频格式（清晰度、编码、大小）
 - **视频下载** — 支持 360p / 720p / 1080p / 4K 等各种清晰度
 - **DASH 自动合并** — 视频流和音频流分离时，自动通过 ffmpeg 合并为 mp4
 - **音频提取** — 支持导出 m4a 原始音频或转码为 mp3
@@ -89,11 +90,11 @@ npm run build
 |---|---|---|
 | 桌面框架 | Electron | 跨平台桌面应用 |
 | 后端 API | Python / FastAPI | REST API 服务 |
-| 下载引擎 | yt-dlp | YouTube 解析与下载 |
+| 下载引擎 | yt-dlp | YouTube/TikTok/抖音解析与下载 |
 | 媒体处理 | ffmpeg | 音视频合并与转码 |
 | JS 运行时 | Node.js | YouTube n-parameter 签名挑战 |
 | 前端 | HTML / CSS / JS | 单页 Web 应用 |
 
 ## 许可证
 
-仅限个人/内部使用。请遵守 YouTube 使用条款和适用的版权法律。
+仅限个人/内部使用。请遵守 YouTube、TikTok、抖音的使用条款和适用的版权法律。

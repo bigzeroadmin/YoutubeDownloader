@@ -84,7 +84,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="YouTube Downloader API",
+    title="YouTube, TikTok & Douyin Downloader API",
     version="1.0.0",
     lifespan=lifespan,
 )

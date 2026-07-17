@@ -44,6 +44,7 @@ class DownloadRequest(BaseModel):
     format_id: str
     audio_only: bool = False
     convert_mp3: bool = False
+    has_audio: bool = False
     expected_filesize: Optional[int] = None
 
 
@@ -54,6 +55,7 @@ class TaskInfo(BaseModel):
     format_id: str = ""
     audio_only: bool = False
     convert_mp3: bool = False
+    has_audio: bool = False
     filename: Optional[str] = None
     filesize: Optional[int] = None
     error: Optional[str] = None

@@ -21,10 +21,6 @@ from app.models import FormatInfo, ResolveResponse
 
 logger = logging.getLogger(__name__)
 
-_URL_RE = re.compile(
-    r"^https?://(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)/",
-)
-
 _COOKIE_ERROR_RE = re.compile(
     r"(HTTP Error 403|Sign in to confirm|cookies?\s*(are\s*)?expired|"
     r"login required|session\s*expired|consent\s*required|"
@@ -54,7 +50,10 @@ def validate_url(url: str) -> str:
         raise ValueError("Only http/https URLs are allowed")
     host = parsed.hostname or ""
     if not any(host == h or host.endswith("." + h) for h in ALLOWED_HOSTS):
-        raise ValueError(f"Host {host} is not allowed")
+        raise ValueError(
+            "Only YouTube, TikTok and Douyin links are supported "
+            f"(received host: {host or 'unknown'})"
+        )
     return url
 
 

@@ -24,6 +24,7 @@ async def download(req: DownloadRequest):
         format_id=req.format_id,
         audio_only=req.audio_only,
         convert_mp3=req.convert_mp3,
+        has_audio=req.has_audio,
         expected_filesize=req.expected_filesize,
     )
     await create_task(task)

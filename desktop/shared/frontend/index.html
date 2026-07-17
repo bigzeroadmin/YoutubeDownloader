@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>YouTube Downloader</title>
+  <title>多平台视频下载器</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>YouTube Downloader</h1>
+      <h1>多平台视频下载器</h1>
       <p class="subtitle">私有部署 · 粘贴链接即可下载</p>
       <button class="help-btn" onclick="openHelp()" title="使用说明">?</button>
     </header>
@@ -25,15 +25,15 @@
           <div class="step">
             <span class="step-num">1</span>
             <div class="step-content">
-              <h4>登录 YouTube</h4>
-              <p>在浏览器中打开 <strong>youtube.com</strong> 并登录你的账号。应用会自动读取浏览器 Cookie 以获取下载权限。</p>
+              <h4>登录视频平台（按需）</h4>
+              <p>如视频需要登录权限，请先在浏览器中登录 <strong>YouTube</strong>、<strong>TikTok</strong> 或 <strong>抖音</strong>。应用会自动读取浏览器 Cookie。</p>
             </div>
           </div>
           <div class="step">
             <span class="step-num">2</span>
             <div class="step-content">
               <h4>复制视频链接</h4>
-              <p>找到想要下载的视频，从地址栏复制完整链接，格式如：<code>https://youtube.com/watch?v=...</code></p>
+              <p>复制 YouTube、TikTok 或抖音视频的完整链接，也支持 <code>v.douyin.com</code> 抖音短链接。</p>
             </div>
           </div>
           <div class="step">
@@ -58,7 +58,7 @@
             </div>
           </div>
           <div class="help-tip">
-            <strong>提示：</strong>下载文件默认保存在 <code>~/Downloads/YouTubeDownload/</code> 目录下。如遇到下载失败，请确保浏览器已登录 YouTube 并刷新 Cookie。
+            <strong>提示：</strong>下载文件默认保存在 <code>~/Downloads/YouTubeDownload/</code> 目录下。如遇到权限相关错误，请登录对应平台并刷新 Cookie。
           </div>
         </div>
       </div>
@@ -69,7 +69,7 @@
         <input
           id="urlInput"
           type="url"
-          placeholder="粘贴 YouTube 视频链接..."
+          placeholder="粘贴 YouTube、TikTok 或抖音视频链接..."
           autocomplete="off"
         />
         <button id="resolveBtn" onclick="handleResolve()">解析</button>

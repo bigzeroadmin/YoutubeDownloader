@@ -174,6 +174,7 @@ async function startDownload(formatId) {
         format_id: formatId,
         audio_only: isAudio,
         convert_mp3: isAudio,
+        has_audio: Boolean(fmt.acodec && fmt.acodec !== "none"),
         expected_filesize: fmt.filesize || null,
       }),
     });
