@@ -18,6 +18,8 @@ from app.config import (
     YTDLP_CACHE_DIR,
 )
 from app.models import FormatInfo, ResolveResponse
+from app.services.porn91_service import extract_video as extract_91porn
+from app.services.porn91_service import is_porn91_url
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +53,7 @@ def validate_url(url: str) -> str:
     host = parsed.hostname or ""
     if not any(host == h or host.endswith("." + h) for h in ALLOWED_HOSTS):
         raise ValueError(
-            "Only YouTube, TikTok and Douyin links are supported "
+            "Only YouTube, TikTok, Douyin and 91porn links are supported "
             f"(received host: {host or 'unknown'})"
         )
     return url
@@ -102,8 +104,31 @@ def check_auth_status() -> dict:
     }
 
 
+def _resolve_91porn(url: str) -> ResolveResponse:
+    """Resolve a 91porn page: single direct mp4, no DASH/merge needed."""
+    info = extract_91porn(url, timeout=RESOLVE_TIMEOUT_SECONDS)
+    return ResolveResponse(
+        title=info["title"],
+        thumbnail=info["thumbnail"],
+        duration=info["duration"],
+        formats=[
+            FormatInfo(
+                format_id="mp4",
+                ext="mp4",
+                resolution="source",
+                filesize=info["filesize"],
+                vcodec="h264",
+                acodec="aac",
+                note="direct mp4",
+            )
+        ],
+    )
+
+
 def resolve_formats(url: str) -> ResolveResponse:
     url = validate_url(url)
+    if is_porn91_url(url):
+        return _resolve_91porn(url)
     ydl_opts = {
         **_base_opts(),
         "quiet": True,

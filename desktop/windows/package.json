@@ -1,6 +1,6 @@
 {
   "name": "youtube-download-windows",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "YouTube Video/Audio Downloader Desktop App (Windows)",
   "main": "src/main.js",
   "scripts": {

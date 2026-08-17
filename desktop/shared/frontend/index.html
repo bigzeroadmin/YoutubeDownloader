@@ -33,7 +33,7 @@
             <span class="step-num">2</span>
             <div class="step-content">
               <h4>复制视频链接</h4>
-              <p>复制 YouTube、TikTok 或抖音视频的完整链接，也支持 <code>v.douyin.com</code> 抖音短链接。</p>
+              <p>复制 YouTube、TikTok、抖音或 91porn 视频的完整链接，也支持 <code>v.douyin.com</code> 抖音短链接。</p>
             </div>
           </div>
           <div class="step">
@@ -69,10 +69,11 @@
         <input
           id="urlInput"
           type="url"
-          placeholder="粘贴 YouTube、TikTok 或抖音视频链接..."
+          placeholder="粘贴 YouTube、TikTok、抖音或 91porn 视频链接..."
           autocomplete="off"
         />
         <button id="resolveBtn" onclick="handleResolve()">解析</button>
+        <button id="resetBtn" class="reset-btn" onclick="handleReset()" title="清空当前状态，开始新的解析">重置</button>
       </div>
       <p id="errorMsg" class="error hidden"></p>
     </section>

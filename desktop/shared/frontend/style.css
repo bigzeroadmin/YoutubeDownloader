@@ -100,6 +100,16 @@ header h1 {
   cursor: not-allowed;
 }
 
+.url-bar button.reset-btn {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.url-bar button.reset-btn:hover {
+  background: var(--border);
+}
+
 .error {
   color: var(--error);
   font-size: 0.85rem;

@@ -294,6 +294,40 @@ function escapeHtml(str) {
   return d.innerHTML;
 }
 
+/* ── Reset ── */
+
+function handleReset() {
+  const hasActive = taskQueue.some((t) =>
+    ["pending", "running", "waiting_cookies"].includes(t.status),
+  );
+  if (
+    hasActive &&
+    !confirm("仍有下载任务在进行中，重置只会清空界面显示（后台任务不受影响）。确定重置吗？")
+  ) {
+    return;
+  }
+
+  taskQueue.forEach((t) => {
+    if (t.pollTimer) clearInterval(t.pollTimer);
+  });
+  taskQueue.length = 0;
+  allFormats = [];
+  currentTab = "video";
+
+  $("#urlInput").value = "";
+  hide($("#errorMsg"));
+  hide($("#videoInfo"));
+  renderQueue(); // empties and hides the queue section
+  document
+    .querySelectorAll(".tab")
+    .forEach((t) => t.classList.toggle("active", t.dataset.tab === "video"));
+
+  const btn = $("#resolveBtn");
+  btn.disabled = false;
+  btn.textContent = "解析";
+  $("#urlInput").focus();
+}
+
 /* ── Help Modal ── */
 
 function openHelp() {

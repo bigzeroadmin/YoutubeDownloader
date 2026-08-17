@@ -52,6 +52,8 @@ ALLOWED_HOSTS = [
     "youtu.be",
     "tiktok.com",
     "douyin.com",
+    "91porn.com",
+    "9p9.xyz",
 ]
 
 # --- Authentication ---

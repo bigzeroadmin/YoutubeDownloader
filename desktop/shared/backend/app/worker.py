@@ -77,8 +77,73 @@ def _progress_hook(task: TaskInfo):
     return hook
 
 
+def _run_91porn(task: TaskInfo, task_dir: Path) -> None:
+    """Download a 91porn video: re-extract the signed mp4 URL, then stream it.
+
+    Uses a plain urllib streaming download rather than yt-dlp — the CDN is
+    picky about request shape, and this lets us validate that we got the
+    real file rather than a tiny dummy clip.
+    """
+    import urllib.request
+
+    from app.services.porn91_service import extract_video
+
+    info = extract_video(task.url)
+    expected = info["filesize"] or 0
+    task.expected_filesize = task.expected_filesize or info["filesize"]
+
+    safe_title = re.sub(r'[\\/:*?"<>|]', "_", info["title"]).strip()[:150] or "91porn"
+    out_path = task_dir / f"{safe_title}.mp4"
+
+    req = urllib.request.Request(info["video_url"], headers=info["headers"])
+    with urllib.request.urlopen(req, timeout=60) as resp, open(out_path, "wb") as fh:
+        total = int(resp.headers.get("Content-Length") or 0) or expected
+        downloaded = 0
+        while True:
+            chunk = resp.read(256 * 1024)
+            if not chunk:
+                break
+            fh.write(chunk)
+            downloaded += len(chunk)
+            if total > 0:
+                task.progress = round(downloaded / total * 100, 1)
+
+    # Guard against dummy clips / truncated bodies: raise so the worker
+    # retries with a freshly sampled mirror URL.
+    final_size = out_path.stat().st_size
+    if expected and final_size < expected * 0.9:
+        out_path.unlink(missing_ok=True)
+        raise RuntimeError(
+            f"91porn served a truncated/dummy file ({final_size} bytes, "
+            f"expected ~{expected}); retrying with a fresh mirror"
+        )
+
+    task.progress = 100.0
+    task.filename = out_path.name
+
+    if task.convert_mp3 or task.audio_only:
+        import subprocess
+
+        ext, codec_args = (
+            ("mp3", ["-q:a", "2"]) if task.convert_mp3 else ("m4a", ["-q:a", "2"])
+        )
+        audio_path = task_dir / f"{safe_title}.{ext}"
+        subprocess.run(
+            ["ffmpeg", "-y", "-i", str(out_path), "-vn", *codec_args, str(audio_path)],
+            check=True, capture_output=True,
+        )
+        out_path.unlink()
+        task.filename = audio_path.name
+
+
 def _run_ytdlp(task: TaskInfo, task_dir: Path) -> None:
     """Synchronous yt-dlp download — runs in a thread."""
+    from app.services.porn91_service import is_porn91_url
+
+    if is_porn91_url(task.url):
+        _run_91porn(task, task_dir)
+        return
+
     is_merged = "+" in task.format_id
 
     # Determine format string: for video-only formats, merge with best audio

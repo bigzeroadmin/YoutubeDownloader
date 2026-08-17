@@ -31,6 +31,8 @@ async def _cleanup_expired_files():
         await asyncio.sleep(CLEANUP_INTERVAL_SECONDS)
         now = time.time()
         try:
+            if not DOWNLOAD_DIR.is_dir():
+                continue  # user may have moved/deleted the download folder
             for task_dir in DOWNLOAD_DIR.iterdir():
                 if not task_dir.is_dir():
                     continue
